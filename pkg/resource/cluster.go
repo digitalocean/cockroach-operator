@@ -1,5 +1,5 @@
 /*
-Copyright 2022 The Cockroach Authors
+Copyright 2023 The Cockroach Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -162,6 +162,17 @@ func (cluster Cluster) PublicServiceName() string {
 	return fmt.Sprintf("%s-public", cluster.Name())
 }
 
+// PublicServiceAddress is the FQDN of the public service.
+// E.g. <name>-public.namespace.svc.cluster.local
+func (cluster Cluster) PublicServiceAddress() string {
+	return fmt.Sprintf(
+		"%s.%s.%s",
+		cluster.PublicServiceName(),
+		cluster.Namespace(),
+		cluster.Domain(),
+	)
+}
+
 func (cluster Cluster) ServiceAccountName() string {
 	return fmt.Sprintf("%s-sa", cluster.Name())
 }
@@ -289,10 +300,18 @@ func (cluster Cluster) GetImagePullSecret() *string {
 }
 
 func (cluster Cluster) NodeTLSSecretName() string {
+	if cluster.Spec().NodeTLSSecret != "" {
+		return cluster.Spec().NodeTLSSecret
+	}
+
 	return fmt.Sprintf("%s-node", cluster.Name())
 }
 
 func (cluster Cluster) ClientTLSSecretName() string {
+	if cluster.Spec().ClientTLSSecret != "" {
+		return cluster.Spec().ClientTLSSecret
+	}
+
 	return fmt.Sprintf("%s-root", cluster.Name())
 }
 func (cluster Cluster) CASecretName() string {
@@ -309,15 +328,6 @@ func (cluster Cluster) SecureMode() string {
 	}
 
 	return "--insecure"
-}
-
-func (cluster Cluster) IsFresh(fetcher Fetcher) (bool, error) {
-	actual := ClusterPlaceholder(cluster.Name())
-	if err := fetcher.Fetch(actual); err != nil {
-		return false, errors.Wrapf(err, "failed to fetch cluster resource")
-	}
-
-	return cluster.cr.ResourceVersion == actual.ResourceVersion, nil
 }
 
 func (cluster Cluster) LoggingConfiguration(fetcher Fetcher) (string, error) {

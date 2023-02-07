@@ -1,5 +1,5 @@
 /*
-Copyright 2022 The Cockroach Authors
+Copyright 2023 The Cockroach Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -51,6 +51,11 @@ func (b ClusterBuilder) Namespaced(namespace string) ClusterBuilder {
 	return b
 }
 
+func (b ClusterBuilder) WithAutomountServiceAccountToken(mount bool) ClusterBuilder {
+	b.cluster.Spec.AutomountServiceAccountToken = mount
+	return b
+}
+
 func (b ClusterBuilder) WithUID(uid string) ClusterBuilder {
 	b.cluster.ObjectMeta.UID = amtypes.UID(uid)
 	return b
@@ -89,6 +94,11 @@ func (b ClusterBuilder) WithHTTPPort(port int32) ClusterBuilder {
 
 func (b ClusterBuilder) WithTLS() ClusterBuilder {
 	b.cluster.Spec.TLSEnabled = true
+	return b
+}
+
+func (b ClusterBuilder) WithClientTLS(secret string) ClusterBuilder {
+	b.cluster.Spec.ClientTLSSecret = secret
 	return b
 }
 
