@@ -1,5 +1,5 @@
 /*
-Copyright 2022 The Cockroach Authors
+Copyright 2023 The Cockroach Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -79,8 +79,8 @@ func TestUpdateCrdbVersions(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 
 		// shuffle images to ensure semver sort is working
-		rand.Seed(time.Now().UnixNano())
-		rand.Shuffle(len(images), func(i, j int) { images[i], images[j] = images[j], images[i] })
+		rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+		rnd.Shuffle(len(images), func(i, j int) { images[i], images[j] = images[j], images[i] })
 
 		require.NoError(t, tmpl.Execute(w, images))
 	}))
