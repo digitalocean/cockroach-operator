@@ -1,5 +1,5 @@
 /*
-Copyright 2022 The Cockroach Authors
+Copyright 2024 The Cockroach Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -142,7 +142,7 @@ func RequireClusterToBeReadyEventually(t *testing.T, sb testenv.DiffingSandbox, 
 
 // RequireDbContainersToUseImage checks that the database is using the correct image
 func RequireDbContainersToUseImage(t *testing.T, sb testenv.DiffingSandbox, cr *api.CrdbCluster) {
-	err := wait.Poll(10*time.Second, 400*time.Second, func() (bool, error) {
+	err := wait.Poll(10*time.Second, 600*time.Second, func() (bool, error) {
 		pods, err := fetchPodsInStatefulSet(sb, labels.Common(cr).Selector(cr.Spec.AdditionalLabels))
 		if err != nil {
 			return false, err
@@ -621,7 +621,9 @@ func RequireClusterInImagePullBackoff(t *testing.T, sb testenv.DiffingSandbox, b
 		"app.kubernetes.io/instance": clusterName,
 	}
 
-	wErr := wait.Poll(10*time.Second, 500*time.Second, func() (bool, error) {
+	// Timeout must be greater than 2 minutes, the max backoff time for the
+	// version checker job.
+	wErr := wait.Poll(10*time.Second, 3*time.Minute, func() (bool, error) {
 		if err := sb.List(jobList, jobLabel); err != nil {
 			return false, err
 		}
@@ -658,7 +660,7 @@ func RequireClusterInFailedState(t *testing.T, sb testenv.DiffingSandbox, b Clus
 		},
 	}
 
-	wErr := wait.Poll(10*time.Second, 500*time.Second, func() (bool, error) {
+	wErr := wait.Poll(10*time.Second, 2*time.Minute, func() (bool, error) {
 		if err := sb.Get(&crdbCluster); err != nil {
 			return false, err
 		}

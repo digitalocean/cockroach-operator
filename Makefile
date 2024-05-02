@@ -1,4 +1,4 @@
-# Copyright 2022 The Cockroach Authors
+# Copyright 2024 The Cockroach Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,6 +17,11 @@
 # Install instuctions https://docs.bazel.build/versions/master/install.html
 
 SHELL:=/usr/bin/env bash -O globstar
+
+# Define path where we install binaries.
+# NOTE(all): We need to use absolute paths because kubetest2 on go 1.19 does
+# not support relative paths.
+BINPATH := $(abspath bazel-bin)
 
 # values used in workspace-status.sh
 CLUSTER_NAME?=bazel-test
@@ -89,7 +94,7 @@ test/e2e-short:
 test/e2e/testrunner-k3d-%: PACKAGE=$*
 test/e2e/testrunner-k3d-%:
 	bazel run //hack/k8s:k8s -- -type k3d
-	bazel test --stamp //e2e/$(PACKAGE)/... --test_arg=-test.v --test_arg=-test.parallel=8 --test_arg=parallel=true
+	bazel test --stamp //e2e/$(PACKAGE)/... --test_arg=-test.v --test_arg=-test.parallel=4 --test_arg=parallel=true
 
 # Use this target to run e2e tests using a k3d k8s cluster.
 # This target uses k3d to start a k8s cluster  and runs the e2e tests
@@ -104,15 +109,15 @@ test/e2e/testrunner-k3d-%:
 test/e2e/k3d-%: PACKAGE=$*
 test/e2e/k3d-%:
 	bazel build //hack/bin/... //e2e/kubetest2-k3d/...
-	PATH=bazel-bin/hack/bin:bazel-bin/e2e/kubetest2-k3d/kubetest2-k3d_/:${PATH} \
-		bazel-bin/hack/bin/kubetest2 k3d \
+	PATH=$(BINPATH)/hack/bin:$(BINPATH)/e2e/kubetest2-k3d/kubetest2-k3d_/:${PATH} \
+		kubetest2 k3d \
 		--cluster-name=$(CLUSTER_NAME) --image rancher/k3s:v1.23.3-k3s1 --servers 3 \
 		--up --down -v 10 --test=exec -- make test/e2e/testrunner-k3d-$(PACKAGE)
 
 # This target is used by kubetest2-eks to run e2e tests.
 .PHONY: test/e2e/testrunner-eks
 test/e2e/testrunner-eks:
-	KUBECONFIG=$(TMPDIR)/$(CLUSTER_NAME)-eks.kubeconfig.yaml bazel-bin/hack/bin/kubectl create -f hack/eks-storageclass.yaml
+	KUBECONFIG=$(TMPDIR)/$(CLUSTER_NAME)-eks.kubeconfig.yaml $(BINPATH)/hack/bin/kubectl create -f hack/eks-storageclass.yaml
 	bazel test --stamp //e2e/upgrades/...  --action_env=KUBECONFIG=$(TMPDIR)/$(CLUSTER_NAME)-eks.kubeconfig.yaml
 	bazel test --stamp //e2e/create/...  --action_env=KUBECONFIG=$(TMPDIR)/$(CLUSTER_NAME)-eks.kubeconfig.yaml
 	bazel test --stamp //e2e/decommission/...  --action_env=KUBECONFIG=$(TMPDIR)/$(CLUSTER_NAME)-eks.kubeconfig.yaml
@@ -123,8 +128,8 @@ test/e2e/testrunner-eks:
 .PHONY: test/e2e/eks
 test/e2e/eks:
 	bazel build //hack/bin/... //e2e/kubetest2-eks/...
-	PATH=${PATH}:bazel-bin/hack/bin:bazel-bin/e2e/kubetest2-eks/kubetest2-eks_/ \
-	bazel-bin/hack/bin/kubetest2 eks --cluster-name=$(CLUSTER_NAME)  --up --down -v 10 \
+	PATH=${PATH}:$(BINPATH)/hack/bin:$(BINPATH)/e2e/kubetest2-eks/kubetest2-eks_/ \
+	$(BINPATH)/hack/bin/kubetest2 eks --cluster-name=$(CLUSTER_NAME)  --up --down -v 10 \
 		--test=exec -- make test/e2e/testrunner-eks
 
 # This target is used by kubetest2-tester-exec when running a gke test
@@ -163,7 +168,7 @@ test/e2e/testrunner-gke:
 .PHONY: test/e2e/gke
 test/e2e/gke:
 	bazel build //hack/bin/...
-	PATH=${PATH}:bazel-bin/hack/bin bazel-bin/hack/bin/kubetest2 gke --cluster-name=$(CLUSTER_NAME) \
+	PATH=${PATH}:$(BINPATH)/hack/bin kubetest2 gke --cluster-name=$(CLUSTER_NAME) \
 		--zone=$(GCP_ZONE) --project=$(GCP_PROJECT) \
 		--version latest --up --down -v 10 --ignore-gcp-ssh-key \
 		--test=exec -- make test/e2e/testrunner-gke
@@ -185,8 +190,8 @@ test/e2e/testrunner-openshift:
 .PHONY: test/e2e/openshift
 test/e2e/openshift:
 	bazel build //hack/bin/... //e2e/kubetest2-openshift/...
-	PATH=${PATH}:bazel-bin/hack/bin:bazel-bin/e2e/kubetest2-openshift/kubetest2-openshift_/ \
-	     bazel-bin/hack/bin/kubetest2 openshift --cluster-name=$(CLUSTER_NAME) \
+	PATH=${PATH}:$(BINPATH)/hack/bin:$(BINPATH)/e2e/kubetest2-openshift/kubetest2-openshift_/ \
+	     kubetest2 openshift --cluster-name=$(CLUSTER_NAME) \
 	     --gcp-project-id=$(GCP_PROJECT) \
 	     --gcp-region=$(GCP_REGION) \
 	     --base-domain=$(BASE_DOMAIN) \
@@ -204,6 +209,12 @@ test/e2e/testrunner-openshift-packaging: test/openshift-package
 		--action_env=KUBECONFIG=$(HOME)/openshift-$(CLUSTER_NAME)/auth/kubeconfig \
 		--action_env=APP_VERSION=$(APP_VERSION) \
 		--action_env=DOCKER_REGISTRY=$(DOCKER_REGISTRY)
+
+# Run preflight checks for OpenShift. This expects a running OpenShift cluster.
+# Eg. make test/preflight-<operator|bundle|marketplace>
+test/preflight-%: CONTAINER=$*
+test/preflight-%: release/generate-bundle
+	@bazel run //hack:redhat-preflight -- $(CONTAINER)
 
 #
 # Different dev targets
@@ -262,6 +273,7 @@ dev/up: dev/down
 
 .PHONY: dev/down
 dev/down:
+	@bazel build //hack/bin:k3d
 	@hack/dev.sh down
 #
 # Targets that allow to install the operator on an existing cluster
@@ -327,7 +339,7 @@ release/image:
 # RedHat OpenShift targets
 #
 
-#RED HAT IMAGE BUNDLE
+#REDHAT IMAGE BUNDLE
 RH_BUNDLE_REGISTRY?=registry.connect.redhat.com/cockroachdb
 RH_BUNDLE_IMAGE_REPOSITORY?=cockroachdb-operator-bundle
 RH_BUNDLE_VERSION?=$(VERSION)
@@ -351,3 +363,16 @@ PKG_MAN_OPTS ?= "$(PKG_CHANNELS) $(PKG_DEFAULT_CHANNEL)"
 .PHONY: release/generate-bundle
 release/generate-bundle:
 	bazel run //hack:bundle -- $(RH_BUNDLE_VERSION) $(RH_OPERATOR_IMAGE) $(PKG_MAN_OPTS) $(RH_COCKROACH_DATABASE_IMAGE)
+
+.PHONY: release/publish-operator
+publish-operator:
+	./build/release/teamcity-publish-release.sh
+
+.PHONY: release/publish-operator-openshift
+publish-operator-openshift:
+	./build/release/teamcity-publish-openshift.sh
+
+.PHONY: release/publish-openshift-bundle
+release/publish-openshift-bundle:
+	./build/release/teamcity-publish-openshift-bundle.sh
+

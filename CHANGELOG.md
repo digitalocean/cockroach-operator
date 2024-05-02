@@ -5,13 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# [Unreleased](https://github.com/cockroachdb/cockroach-operator/compare/v2.6.0...master)
+# [Unreleased](https://github.com/cockroachdb/cockroach-operator/compare/v2.14.0...master)
+
+# [v2.14.0](https://github.com/cockroachdb/cockroach-operator/compare/v2.13.0...v2.14.0)
+
+# [v2.13.0](https://github.com/cockroachdb/cockroach-operator/compare/v2.12.0...v2.13.0)
+
+# [v2.12.0](https://github.com/cockroachdb/cockroach-operator/compare/v2.11.0...v2.12.0)
+
+# [v2.11.0](https://github.com/cockroachdb/cockroach-operator/compare/v2.10.0...v2.11.0)
+
+* Bug fix to return correct error message if value passed for `whenUnsatisfiable` under `topologySpreadConstraints` field is invalid.
+* Add openshift release process for cockroach operator
+
+# [v2.10.0](https://github.com/cockroachdb/cockroach-operator/compare/v2.9.0...v2.10.0)
+
+## Added
+
+* Upgrade the underlying k8s dependencies from 1.20 to 1.21 to support operator installation on k8s 1.25+.
+
+# [v2.9.0](https://github.com/cockroachdb/cockroach-operator/compare/v2.8.0...v2.9.0)
+
+## Fixed
+
+* Install init container certs with 600 permissions
+* Ensure operator can connect to DBs in all namespaces
+
+# [v2.8.0](https://github.com/cockroachdb/cockroach-operator/compare/v2.7.0...v2.8.0)
+
+## Added
+
+* `AutomountServiceAccountToken` field for cluster spec to allow mounting the default service account token.
+
+## Fixed
+
+* Delete the CancelLoop function, fixing a cluster status update bug
+* Correctly detect failed version checker Pods
+* retry cluster status updates, reducing test flakes
+
+## Changed
+* Update validation webhook to reject changes to cluster spec's AdditionalLabels field
+
+# [v2.7.0](https://github.com/cockroachdb/cockroach-operator/compare/v2.6.0...v2.7.0)
 
 ## Fixed
 
 * Grant operator deletecollection permissions to fix fullcluster restart flow
 * Grant operator list and update permissions on pvcs to fix pvc resize flow
 * Bump TerminationGracePeriodSeconds from 1m to 5m
+* Prefer user added --join flags over default when explicitly passed
 
 # [v2.6.0](https://github.com/cockroachdb/cockroach-operator/compare/v2.5.3...v2.6.0)
 

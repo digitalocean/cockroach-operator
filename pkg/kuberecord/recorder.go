@@ -1,5 +1,5 @@
 /*
-Copyright 2022 The Cockroach Authors
+Copyright 2024 The Cockroach Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"path/filepath"
 	"sync"
@@ -95,15 +95,16 @@ func WithMode(mode recorder.Mode) Option {
 // will ensure that future recordings don't run on an unclean environment.
 //
 // Most test cases should follow the following template:
-//       var restCfg *rest.Config
-//       if kuberecord.Mode() != kuberecorder.ModeReplaying {
-//               restCfg = LoadOrCreateARealRestConfig()
-//       }
-//       restCfg = Recorder(t, restCfg)
-//       // Make initial  assertions about the environment
-//       AssertNamespaceDoesntExist(t, restCfg)
-//       // Run your tests and assertions
-//       // Cleanup the cluster, ideally back to the initial state.
+//
+//	var restCfg *rest.Config
+//	if kuberecord.Mode() != kuberecorder.ModeReplaying {
+//	        restCfg = LoadOrCreateARealRestConfig()
+//	}
+//	restCfg = Recorder(t, restCfg)
+//	// Make initial  assertions about the environment
+//	AssertNamespaceDoesntExist(t, restCfg)
+//	// Run your tests and assertions
+//	// Cleanup the cluster, ideally back to the initial state.
 func Recorder(t *testing.T, cfg *rest.Config, opts ...Option) *rest.Config {
 	o := &options{
 		name:        t.Name(),
@@ -184,13 +185,13 @@ func (f *kubeRecorder) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	var err error
 	if r.Body != nil {
-		body, err = ioutil.ReadAll(r.Body)
+		body, err = io.ReadAll(r.Body)
 		if err != nil {
 			return nil, err
 		}
 
 		// Reset the body to something usable
-		r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+		r.Body = io.NopCloser(bytes.NewBuffer(body))
 
 		if _, err := hasher.Write(body); err != nil {
 			// "It never returns an error."

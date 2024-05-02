@@ -17,39 +17,48 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
 load("@bazel_gazelle//:deps.bzl", "go_repository")
 
 # This controls the version for all openshift binaries (opm, oc, opernshift-install, etc.)
-OPENSHIFT_VERSION = "4.9.17"
+OPENSHIFT_VERSION = "4.10.18"
 OPENSHIFT_REPO = "https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/{}".format(OPENSHIFT_VERSION)
 
 # filenames and versions from ${OPENSHIFT_REPO}/sha256sum.txt
 OPENSHIFT_BINS = {
+    "preflight": {
+        # currently, preflight is only available on linux
+        "preflight_linux": {
+            "url": "https://github.com/redhat-openshift-ecosystem/openshift-preflight/releases/download/1.9.1/preflight-linux-amd64",
+            "sha": "626f0899d2551063a141b86e5c7559bc1f9e0079ecc4585e951ac5e5df28f13a",
+        },
+    },
     "oc": {
         "oc_darwin": {
             "url": "{}/openshift-client-mac-{}.tar.gz".format(OPENSHIFT_REPO, OPENSHIFT_VERSION),
-            "sha": "2b06b400ab929275b55d3dbb8d7c54b9f1dd17df0b50247b8fc24b9efc8b1566",
+            "sha": "285c307491d8ffd19c065a942515fda78e53f95289d4b4985aa4c92439f7f339",
         },
         "oc_linux": {
             "url": "{}/openshift-client-linux-{}.tar.gz".format(OPENSHIFT_REPO, OPENSHIFT_VERSION),
-            "sha": "390268a64029f2aea7492f493034b75d4979f676f98762dbbf33eb0da5b294db",
+            "sha": "101bc7e11604b829157b3b314de3760eec857e55f51eeca978825307ff61c190",
         },
     },
     "openshift-install": {
         "openshift_darwin": {
             "url": "{}/openshift-install-mac-{}.tar.gz".format(OPENSHIFT_REPO, OPENSHIFT_VERSION),
-            "sha": "0c51934bfff15f8a8bf666bb9b15c894994afd87d838ffc5579e998f56110738",
+            "sha": "3a36acb92a6759d964a1af62512c747e075a2937a6368203d0598d804db10da2",
          },
         "openshift_linux": {
             "url": "{}/openshift-install-linux-{}.tar.gz".format(OPENSHIFT_REPO, OPENSHIFT_VERSION),
-            "sha": "4213bf060c25a6f38f86f2245f1f28060185e8baa7431f272e726d50f0044604",
+            "sha": "27e6ccb60ce2c7dfe611e1639642277572af78a21c622a7443d5a19006b2e45b",
         },
     },
     "opm": {
         "opm_darwin": {
             "url": "{}/opm-mac-{}.tar.gz".format(OPENSHIFT_REPO, OPENSHIFT_VERSION),
-            "sha": "f6fb6205f242ffef62ac0f4db738b1c099d3302ebb98b23d94926ef2903ed5d8",
+            "sha": "36d7104b1fd29e77a880b63e3e1aa67639a48cca1fdf537411b40a0c36140dba",
+            "src": "darwin-amd64-opm",
          },
         "opm_linux": {
             "url": "{}/opm-linux-{}.tar.gz".format(OPENSHIFT_REPO, OPENSHIFT_VERSION),
-            "sha": "f88d3dcc18950d8cd8512e460de5addcf11e8eb8f31ae675f0dd879908843747",
+            "sha": "6d422682fd688cbebc7818247005e2baf87675efef4931d2f0a2e744dc613b88",
+            "src": "opm",
         },
     },
 }
@@ -71,6 +80,7 @@ def install():
     install_operator_sdk()
     install_opm()
     install_openshift()
+    install_preflight()
 
     # Install golang.org/x/build as kubernetes/repo-infra requires it for the
     # build-tar bazel target.
@@ -178,13 +188,17 @@ def install_kubectl():
 def install_k3d():
     versions = {
         "k3d_darwin": {
-            "url": "https://github.com/rancher/k3d/releases/download/v5.2.2/k3d-darwin-amd64",
+            "url": "https://github.com/k3d-io/k3d/releases/download/v5.2.2/k3d-darwin-amd64",
             "sha": "40ac312bc762611de80daff24cb66d79aaaf17bf90e5e8d61caf90e63b57542d",
         },
         "k3d_linux": {
-            "url": "https://github.com/rancher/k3d/releases/download/v5.2.2/k3d-linux-amd64",
+            "url": "https://github.com/k3d-io/k3d/releases/download/v5.2.2/k3d-linux-amd64",
             "sha": "7ddb900e6e50120b65d61568f6af007a82331bf83918608a6a7be8910792faef",
         },
+        "k3d_m1": {
+            "url": "https://github.com/k3d-io/k3d/releases/download/v5.2.2/k3d-darwin-arm64",
+            "sha": "d0149ecb9b3fb831d617a0a880d8235722a70b9131f45f1389235e586050f8f9",
+        }
     }
 
     for k, v in versions.items():
@@ -199,14 +213,14 @@ def install_k3d():
 def install_golangci_lint():
     http_archive(
         name = "golangci_lint_darwin",
-        sha256 = "d4bd25b9814eeaa2134197dd2c7671bb791eae786d42010d9d788af20dee4bfa",
-        urls = ["https://github.com/golangci/golangci-lint/releases/download/v1.42.0/golangci-lint-1.42.0-darwin-amd64.tar.gz"],
+        sha256 = "15c4d19a2c85a04f67779047dbb9467ba176c71fff762a0d514a21bb75e4b42c",
+        urls = ["https://github.com/golangci/golangci-lint/releases/download/v1.56.2/golangci-lint-1.56.2-darwin-amd64.tar.gz"],
         build_file_content =
          """
 filegroup(
      name = "file",
      srcs = [
-        "golangci-lint-1.42.0-darwin-amd64/golangci-lint",
+        "golangci-lint-1.56.2-darwin-amd64/golangci-lint",
      ],
      visibility = ["//visibility:public"],
 )
@@ -215,14 +229,14 @@ filegroup(
 
     http_archive(
             name = "golangci_lint_m1",
-            sha256 = "f649893bf2b1d24b2632b5e109884a15f3bf25cfdad46b34fb8fd13a016098fd",
-            urls = ["https://github.com/golangci/golangci-lint/releases/download/v1.42.1/golangci-lint-1.42.1-darwin-arm64.tar.gz"],
+            sha256 = "5f9ecda712c7ae08fbf872336fae3db866720e5865903d4c53903184b2a2c2dc",
+            urls = ["https://github.com/golangci/golangci-lint/releases/download/v1.56.2/golangci-lint-1.56.2-darwin-arm64.tar.gz"],
             build_file_content =
              """
 filegroup(
     name = "file",
     srcs = [
-       "golangci-lint-1.42.1-darwin-arm64/golangci-lint",
+       "golangci-lint-1.56.2-darwin-arm64/golangci-lint",
     ],
     visibility = ["//visibility:public"],
 )
@@ -231,14 +245,14 @@ filegroup(
 
     http_archive(
         name = "golangci_lint_linux",
-        sha256 = "6937f62f8e2329e94822dc11c10b871ace5557ae1fcc4ee2f9980cd6aecbc159",
-        urls = ["https://github.com/golangci/golangci-lint/releases/download/v1.42.0/golangci-lint-1.42.0-linux-amd64.tar.gz"],
+        sha256 = "e1c313fb5fc85a33890fdee5dbb1777d1f5829c84d655a47a55688f3aad5e501",
+        urls = ["https://github.com/golangci/golangci-lint/releases/download/v1.56.2/golangci-lint-1.56.2-linux-amd64.tar.gz"],
         build_file_content =
          """
 filegroup(
      name = "file",
      srcs = [
-        "golangci-lint-1.42.0-linux-amd64/golangci-lint",
+        "golangci-lint-1.56.2-linux-amd64/golangci-lint",
      ],
      visibility = ["//visibility:public"],
 )
@@ -268,17 +282,17 @@ filegroup(
 def install_kubetest2():
     # install kubetest2 binary
     http_file(
-       name = "kubetest2_darwin",
-       executable = 1,
-       sha256 = "5b20aadd05eca47dead180a7c8296d75e81c184aabf182d4a41ef96597db543d",
-       urls = ["https://storage.googleapis.com/crdb-bazel-artifacts/osx/kubetest2"],
+        name = "kubetest2_darwin",
+        executable = 1,
+        sha256 = "9fab82888e5c955778a8c49fdd2b9d2216be1a58f70615977fb92f678383e688",
+        urls = ["https://storage.googleapis.com/cockroach-operator-bazel-artifacts/kubetest2_darwin_amd64_v1/kubetest2"],
     )
 
     http_file(
         name = "kubetest2_linux",
         executable = 1,
-        sha256 = "7f0b05654fa43ca1c607db297b5f3a775f65eea90355bb6b10137a7fffff5e1a",
-        urls = ["https://storage.googleapis.com/crdb-bazel-artifacts/linux/kubetest2"],
+        sha256 = "f9306a103dc222d51753e788550bd77c05a910a957a7eb4901ccb7f78256f7b8",
+        urls = ["https://storage.googleapis.com/cockroach-operator-bazel-artifacts/kubetest2_linux_amd64_v1/kubetest2"],
     )
 
 ## Fetch kubetest2-gke binary used during e2e tests
@@ -286,34 +300,35 @@ def install_kubetest2_gke():
     # install kubetest2-gke binary
     # TODO osx support
     http_file(
-       name = "kubetest2_gke_darwin",
-       executable = 1,
-       sha256 = "a1cbe02f61931dbe6c8d1662442f42cb538c81e4ec8cdd40f548f0e05cbd55a7",
-       urls = ["https://storage.googleapis.com/crdb-bazel-artifacts/osx/kubetest2-gke"],
+        name = "kubetest2_gke_darwin",
+        executable = 1,
+        sha256 = "12d0b7cc9eb2ab2befe781f08672f2707631debd852f2805bed1565699e44a6e",
+        urls = ["https://storage.googleapis.com/cockroach-operator-bazel-artifacts/kubetest2-gke_darwin_amd64_v1/kubetest2-gke"],
     )
 
     http_file(
         name = "kubetest2_gke_linux",
         executable = 1,
-        sha256 = "9ac658234efc7f59968888662dd2d21908587789f6b812392ac5b6766b17c0b4",
-        urls = ["https://storage.googleapis.com/crdb-bazel-artifacts/linux/kubetest2-gke"],
+        sha256 = "2b294abe037243e8bf71fcef6f02d93ee69abadfd0034681237478fa69474097",
+        urls = ["https://storage.googleapis.com/cockroach-operator-bazel-artifacts/kubetest2-gke_linux_amd64_v1/kubetest2-gke"],
     )
+
 ## Fetch kubetest2-tester-exe binary used during e2e tests
 def install_kubetest2_exe():
     # install kubetest2-exe binary
     # TODO osx support
     http_file(
-       name = "kubetest2_exe_darwin",
-       executable = 1,
-       sha256 = "818690cb55590440e163b18dd139c8a8714df9480f869bafe19eb344047cf37c",
-       urls = ["https://storage.googleapis.com/crdb-bazel-artifacts/osx/kubetest2-tester-exec"],
+        name = "kubetest2_exe_darwin",
+        executable = 1,
+        sha256 = "15a6c8ff2e6b3962954553eacc9aeefb40ac81f67c326144db2ad94d58756357",
+        urls = ["https://storage.googleapis.com/cockroach-operator-bazel-artifacts/kubetest2-tester-exec_darwin_amd64_v1/kubetest2-tester-exec"],
     )
 
     http_file(
         name = "kubetest2_exe_linux",
         executable = 1,
-        sha256 = "4483f40f48b98e8a6aa41f58bfdf1f2787066a4e1ad1343e4281892aa1326736",
-        urls = ["https://storage.googleapis.com/crdb-bazel-artifacts/linux/kubetest2-tester-exec"],
+        sha256 = "b96c9b651c6a4449adfa41d6760ec1b34ec02230b5debd850976ced3926d80db",
+        urls = ["https://storage.googleapis.com/cockroach-operator-bazel-artifacts/kubetest2-tester-exec_linux_amd64_v1/kubetest2-tester-exec"],
     )
 
 ## Fetch operator-sdk used on generating csv
@@ -388,12 +403,18 @@ def install_opm():
     versions = OPENSHIFT_BINS["opm"]
 
     for k, v in versions.items():
-      http_file(
-         name = k,
-         executable = 1,
-         sha256 = v["sha"],
-         urls = [v["url"]],
-      )
+      http_archive(
+          name = k,
+          sha256 = v["sha"],
+          urls = [v["url"]],
+          build_file_content = """
+filegroup(
+    name = "file",
+    srcs = ["{src}"],
+    visibility = ["//visibility:public"],
+)
+""".format(src=v["src"])
+			)
 
 ## Fetch openshift-installer
 def install_openshift():
@@ -412,6 +433,17 @@ filegroup(
 )
 """
       )
+
+def install_preflight():
+    versions = OPENSHIFT_BINS["preflight"]
+
+    for k, v in versions.items():
+        http_file(
+            name = k,
+            executable = 1,
+            sha256 = v["sha"],
+            urls = [v["url"]]
+        )
 
 ## Fetch crdb used in our container
 def install_crdb():

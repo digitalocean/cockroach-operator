@@ -1,5 +1,5 @@
 /*
-Copyright 2022 The Cockroach Authors
+Copyright 2024 The Cockroach Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -124,6 +124,7 @@ func (k *PodDialer) DialContext(ctx context.Context, network, addr string) (net.
 
 // Dial connects to a port in a kubernetes pod specified by addr. network must be TCP
 // Implmentation adapted from:
+//
 //	https://github.com/kubernetes/kubernetes/blob/27c70773add99e43464a4e525e3bddfc8b602a3d/staging/src/k8s.io/client-go/tools/portforward/portforward.go
 //	https://github.com/kubernetes/kubernetes/blob/27c70773add99e43464a4e525e3bddfc8b602a3d/staging/src/k8s.io/kubectl/pkg/cmd/portforward/portforward.go
 func (k *PodDialer) Dial(network, addr string) (net.Conn, error) {
@@ -160,7 +161,7 @@ func (k *PodDialer) Dial(network, addr string) (net.Conn, error) {
 
 	errorChan := make(chan error)
 	go func() {
-		message, err := ioutil.ReadAll(errStream)
+		message, err := io.ReadAll(errStream)
 		if err != nil {
 			errorChan <- err
 		}

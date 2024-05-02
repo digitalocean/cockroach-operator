@@ -1,5 +1,5 @@
 /*
-Copyright 2022 The Cockroach Authors
+Copyright 2024 The Cockroach Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -68,7 +67,7 @@ var (
 
 func main() {
 	path := filepath.Join(os.Getenv("BUILD_WORKSPACE_DIRECTORY"), versionsFile)
-	if err := ioutil.WriteFile(path, []byte(fileHeader), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(fileHeader), 0644); err != nil {
 		panic(err)
 	}
 
@@ -122,10 +121,11 @@ func fetchAPIResponse(url string) (*apiResponse, error) {
 
 func generateOutput(resp *apiResponse) *yamlOutput {
 	output := new(yamlOutput)
+	usedTags := make(map[string]bool)
 	for _, data := range resp.Data {
 		for _, r := range data.Repos {
 			for _, tag := range r.Tags {
-				if !isValid(tag.Name) {
+				if !isValid(tag.Name) || isUsed(usedTags, tag.Name) {
 					continue
 				}
 
@@ -155,6 +155,15 @@ func isValid(tag string) bool {
 	}
 
 	return semVerRegex.MatchString(tag)
+}
+
+// isUsed returns true if a tag has already been used to generate cockroach image.
+func isUsed(usedTags map[string]bool, tag string) bool {
+	if _, ok := usedTags[tag]; ok {
+		return true
+	}
+	usedTags[tag] = true
+	return false
 }
 
 // apiResponse encapsulates the response from the RH Catalog API.
