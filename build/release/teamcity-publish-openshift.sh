@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright 2023 The Cockroach Authors
+# Copyright 2024 The Cockroach Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@ set -euxo pipefail
 source "$(dirname "${0}")/teamcity-support.sh"
 
 RH_PROJECT_ID="5e6027425c5456060d5f6084"
-RH_REGISTRY="scan.connect.redhat.com"
-RH_OPERATOR_IMG="${RH_REGISTRY}/ospid-cf721588-ad8a-4618-938c-5191c5e10ae4/cockroachdb-operator:${TAG}"
+RH_REGISTRY="quay.io"
+RH_OPERATOR_IMG="${RH_REGISTRY}/redhat-isv-containers/${RH_PROJECT_ID}:${TAG}"
 
 OPERATOR_IMG="docker.io/cockroachdb/cockroach-operator:${TAG}"
 if ! [[ -z "${DRY_RUN}" ]] ; then

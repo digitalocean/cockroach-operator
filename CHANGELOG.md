@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# [Unreleased](https://github.com/cockroachdb/cockroach-operator/compare/v2.11.0...master)
+# [Unreleased](https://github.com/cockroachdb/cockroach-operator/compare/v2.14.0...master)
+
+# [v2.14.0](https://github.com/cockroachdb/cockroach-operator/compare/v2.13.0...v2.14.0)
+
+# [v2.13.0](https://github.com/cockroachdb/cockroach-operator/compare/v2.12.0...v2.13.0)
+
+# [v2.12.0](https://github.com/cockroachdb/cockroach-operator/compare/v2.11.0...v2.12.0)
 
 # [v2.11.0](https://github.com/cockroachdb/cockroach-operator/compare/v2.10.0...v2.11.0)
 
@@ -36,6 +42,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Delete the CancelLoop function, fixing a cluster status update bug
 * Correctly detect failed version checker Pods
 * retry cluster status updates, reducing test flakes
+
+## Changed
+* Update validation webhook to reject changes to cluster spec's AdditionalLabels field
 
 # [v2.7.0](https://github.com/cockroachdb/cockroach-operator/compare/v2.6.0...v2.7.0)
 
